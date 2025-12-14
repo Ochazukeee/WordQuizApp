@@ -90,29 +90,51 @@ public class WordQuizAppController extends HttpServlet {
 		if(action == null) {
 			action = "start";
 			logger.info("action is null, setting to 'start'.");
-			
-			try {
-				switch (action) {
-					case "check":
-						logger.info("Calling checkAnswer method. ");
-						checkAnswer(request, response);
-						break;
-					case "hint":
-						logger.info("Calling showHint method. ");
-						showHint(request, response);
-						break;
-					default:
-						logger.warning("Unknown action: " + action + "- Forwarding to doGet");
-						doGet(request, response);
-						break;
-				}
-			} catch (Exception e) {
-				logger.log(Level.SEVERE, "An error occurred during doPost processing.", e);
-				throw e;
+		}	
+		try {
+			switch (action) {
+				case "check":
+					logger.info("Calling checkAnswer method. ");
+					checkAnswer(request, response);
+					break;
+				case "hint":
+					logger.info("Calling showHint method. ");
+					showHint(request, response);
+					break;
+				default:
+					logger.warning("Unknown action: " + action + "- Forwarding to doGet");
+					doGet(request, response);
+					break;
 			}
-			logger.info("=== doPost Method Processing Complete ===");
+		} catch (Exception e) {
+			logger.log(Level.SEVERE, "An error occurred during doPost processing.", e);
+			throw e;
 		}
-	}	
+		logger.info("=== doPost Method Processing Complete ===");
+	}
+
+    /**
+     * initialisation
+     */
+	private void initialiseSession(HttpSession session) {
+		session.setAttribute("currentQuestion", 1);
+		session.setAttribute("correctAnswers", 0);
+		session.setAttribute("usedWordIds", new ArrayList<Integer>());
+		session.setAttribute("quizResults", new ArrayList<String>());
+		logger.info("Session ID:" + session.getId());
+		logger.info("Session initialization complete.");
+	}
+	
+    /**
+     * set next question to session
+     */
+	private void setNewQuestion(HttpSession session, WordQuizApp wordQuizApp) {
+		session.setAttribute("currentWord", wordQuizApp);
+		session.setAttribute("showHint", false);
+		session.setAttribute("answerd", false);
+		session.setAttribute("isCorrect", false);
+		session.setAttribute("userAnswer", "");
+	}
 	
     /**
      * Starts the quiz.
@@ -123,13 +145,8 @@ public class WordQuizAppController extends HttpServlet {
 		logger.info("--- startQuiz Method Started ---");
 
 		HttpSession session = request.getSession();
-		logger.info("Session ID:" + session.getId());
-		
-		session.setAttribute("currentQuestion", 1);
-		session.setAttribute("correctAnswers", 0);
-		session.setAttribute("usedWordIds", new ArrayList<Integer>());
-		session.setAttribute("quizResults", new ArrayList<String>());
-		logger.info("Session initialization complete.");
+
+		initialiseSession(session);
 		
 		// Get the first question
 		try {
@@ -138,15 +155,13 @@ public class WordQuizAppController extends HttpServlet {
 				logger.info("Word retrieved: ID=" + wordQuizApp.getId() + 
 						", Japanese=" + wordQuizApp.getJapaneseWord() + 
 						", English=" + wordQuizApp.getEnglishWord());
-				session.setAttribute("currentWord", wordQuizApp);
-				session.setAttribute("showHint", wordQuizApp);
-				session.setAttribute("answerd", wordQuizApp);
-				session.setAttribute("isCorrect", wordQuizApp);
+				setNewQuestion(session, wordQuizApp);
 			} else {
 				logger.severe("Could not retrieve a word from the database.");
 			}
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, "An error occurred while retrieving the word.", e);
+			throw new ServletException("Failed to start quiz", e);
 		}
 		
 		logger.info("Forwarding to quiz.jsp.");
@@ -166,36 +181,14 @@ public class WordQuizAppController extends HttpServlet {
 		HttpSession session = request.getSession();
 
 		//retrive each from the session
-		Integer currentQuestion = (Integer) session.getAttribute("currentQuestion");
+	Integer currentQuestion = getOrDefault(session, "currentQuestion", 1);
 		WordQuizApp currentWord = (WordQuizApp) session.getAttribute("currentWord");
-		Boolean showHint = (Boolean) session.getAttribute("currentWord");
-		Boolean answered = (Boolean) session.getAttribute("answered");
-		Boolean isCorrect = (Boolean) session.getAttribute("isCorrect");
-		String userAnswer = (String) session.getAttribute("userAnwer");
+		Boolean showHint = getOrDefault(session, "currentquestion", false);
+		Boolean answered = getOrDefault(session, "answered", false);
+		Boolean isCorrect = getOrDefault(session, "isCorrect", false);
+		String userAnswer = (String) session.getAttribute("userAnswer");	
 		String errorMessage = (String) session.getAttribute("errorMessage");
-
-	// null check and default setting
-		if (currentQuestion == null) {
-			currentQuestion = 1;
-			session.setAttribute("currentQuestion", currentQuestion);
-		}
-		if (showHint == null) {
-			showHint = false;
-			session.setAttribute("showHint", showHint);
-		}
-		if (answered == null) {
-			answered = false;
-			session.setAttribute("answered", answered);
-		}
-		if (	isCorrect == null) {
-			isCorrect = false;
-			session.setAttribute("isCorrect", isCorrect);
-		}
-		if (userAnswer == null) {
-			userAnswer = "";
-			session.setAttribute("userAnswer", userAnswer);
-		}
-
+				
 		// Set data in request scope
 		request.setAttribute("currentQuestion", currentQuestion);
 		request.setAttribute("currentWord", currentWord);
@@ -211,7 +204,7 @@ public class WordQuizAppController extends HttpServlet {
 		dispatcher.forward(request, response);
 
 		logger.info("--- prepareQuiz Method Finished ---");
-}
+	}
 
 	private void checkAnswer(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
@@ -236,6 +229,7 @@ public class WordQuizAppController extends HttpServlet {
 		logger.info("Validation result:" + (validation.isValid() ? "Valid" : "Invalid"));
 		
 		if(!validation.isValid()) {
+			// Validation error
 			logger.warning("Validation error:" + validation.getErrorMessage());
 			request.setAttribute("errorMessage", validation.getErrorMessage());
 			session.setAttribute("answered", false);
@@ -253,7 +247,7 @@ public class WordQuizAppController extends HttpServlet {
 			session.setAttribute("userAnswer", validation.getCleanAnswer());
 			
 			if(isCorrect) {
-				int correctAnswers = (Integer) session.getAttribute("correctAmswers");
+				int correctAnswers = (Integer) session.getAttribute("correctAnswers");
 				correctAnswers++;
 				session.setAttribute("correctAnswers", correctAnswers);
 				logger.info("Current correct answer count" + correctAnswers);
@@ -261,7 +255,7 @@ public class WordQuizAppController extends HttpServlet {
 			
 			 // Record the result
 			@SuppressWarnings("unchecked")
-			List<String> results = (List<String>) session.getAttribute("qusestionResults");
+			List<String> results = (List<String>) session.getAttribute("questionResults");
 			int currentQuestion = (Integer) session.getAttribute("currentQuestion");
 			
 			String result = String.format("question%d: %s → %s (%s)",
@@ -273,7 +267,6 @@ public class WordQuizAppController extends HttpServlet {
 			logger.info("Result Record:" + result);
 			
 			logger.info("Forwarding to quiz.jsp.");
-			RequestDispatcher dispatcher = request.getRequestDispatcher("/quiz.jsp");
 			
 			logger.info("--- checkAnswer Method Finished ---");
 			prepareQuiz(request, response);
@@ -318,7 +311,11 @@ public class WordQuizAppController extends HttpServlet {
 		// Get the list of used word IDs
 		@SuppressWarnings("unchecked")
 		List<Integer> usedWordIds = (List<Integer>) session.getAttribute("usedWordIds");
-		WordQuizApp currentWord = (WordQuizApp) session.getAttribute("currentWord");
+		if (usedWordIds ==null) {
+			usedWordIds = new ArrayList<>();
+			session.setAttribute("usedWordIds", usedWordIds);
+		}
+			WordQuizApp currentWord = (WordQuizApp) session.getAttribute("currentWord");
 		
 		if (currentWord != null) {
 			usedWordIds.add(currentWord.getId());
@@ -343,13 +340,12 @@ public class WordQuizAppController extends HttpServlet {
 				session.setAttribute("userAnswer", "");				
 			} else {
 				logger.severe("Could not retrieve a word from the database.");
+				throw new ServletException("Falied to retrive the next question.");
 			}
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, "An error occurred while retrieving the word.", e);
 		}
 
-		RequestDispatcher dispatcher = request.getRequestDispatcher("/quiz.jsp");
-		dispatcher.forward(request, response);
 		prepareQuiz(request, response);		
 		
 		logger.info("--- nextQuiz Method Finished ---");
@@ -359,56 +355,64 @@ public class WordQuizAppController extends HttpServlet {
 	 * Displays the results.
 	 * */
 	private void showResult(HttpServletRequest request, HttpServletResponse response)
-	        throws ServletException, IOException {
-	    
-	    logger.info("--- showResult Method Started ---");
-	    
-	    HttpSession session = request.getSession();
-	    
-	    
-	    Integer correctAnswers = (Integer) session.getAttribute("correctAnswers");
-	    @SuppressWarnings("unchecked")
-	    List<String> questionResults = (List<String>) session.getAttribute("questionResults");
-	    
-	    // null check
-	    if (correctAnswers == null) {
-	        correctAnswers = 0;
-	    }
-	    	    
-	    double percentage = (correctAnswers * 100.0) / 10.0;
-	    
-	    String grade = "";
-	    if (percentage >= 90) {
-	        grade = "Excellent!";
-	    } else if (percentage >= 70) {
-	        grade = "Well done!";
-	    } else if (percentage >= 50) {
-	        grade = "Not bad.";
-	    } else {
-	        grade = "Keep practicing.";
-	    }
-	     
-	    String encouragement = "";
-	    if (percentage < 70) {
-	        encouragement = "With consistent practice, you'll definitely improve. Don't give up!";
-	    } else {
-	        encouragement = "Fantastic job! Keep up the great work with your English studies!";
-	    }
-	    
-	    logger.info("Final correct answers: " + correctAnswers);
-	    logger.info("Percentage: " + percentage + "%, Grade: " + grade);
-	    
-	    
-	    request.setAttribute("correctAnswers", correctAnswers);
-	    request.setAttribute("questionResults", questionResults);
-	    request.setAttribute("percentage", percentage);
-	    request.setAttribute("grade", grade);
-	    request.setAttribute("encouragement", encouragement);
-	    
-	    RequestDispatcher dispatcher = request.getRequestDispatcher("/result.jsp");
-	    dispatcher.forward(request, response);
-		prepareQuiz(request, response);
-	    
-	    logger.info("--- showResult Method Finished ---");
+			throws ServletException, IOException {
+
+		logger.info("--- showResult Method Started ---");
+
+		HttpSession session = request.getSession();
+
+
+		Integer correctAnswers = (Integer) session.getAttribute("correctAnswers");
+		@SuppressWarnings("unchecked")
+		List<String> questionResults = (List<String>) session.getAttribute("questionResults");
+
+		double percentage = (correctAnswers * 100.0) / 10.0;
+		
+		String grade = getGrade(percentage);
+		String encouragement = getEncouragement(percentage);
+
+		logger.info("Final correct answers: " + correctAnswers + 
+					",Percentage: " + percentage + "%, Grade: " + grade);
+
+
+		request.setAttribute("correctAnswers", correctAnswers);
+		request.setAttribute("questionResults", questionResults);
+		request.setAttribute("percentage", percentage);
+		request.setAttribute("grade", grade);
+		request.setAttribute("encouragement", encouragement);
+
+		RequestDispatcher dispatcher = request.getRequestDispatcher("/result.jsp");
+		dispatcher.forward(request, response);
+
+		logger.info("--- showResult Method Finished ---");
+	}
+
+
+	@SuppressWarnings("unchecked")	
+	private <T> T getOrDefault(HttpSession session, String key, T defaultValue) {
+		// TODO Auto-generated method stub
+			T value = (T) session.getAttribute(key);
+			return value != null ? value : defaultValue;
+	}
+
+	private String getGrade(double percentage) { 
+		if (percentage >= 90) {
+			return "Excellent!";
+		} else if (percentage >= 70) {
+			return "Well done!";
+		} else if (percentage >= 50) {
+			return "Not bad.";
+		} else {
+			return "Keep practicing.";
+		}
+	}
+
+	private String getEncouragement(double percentage) { 
+	String encouragement = "";
+		if (percentage < 70) {
+			return "a";
+		} else {
+			return "b";
+		}
 	}
 }

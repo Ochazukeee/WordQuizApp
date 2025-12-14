@@ -7,7 +7,7 @@ public class WordQuizApp {
 	private String japaneseWord;
 	private String englishWord;
 	private String hint;
-	private String comment;
+	private String note;
 	private Timestamp createdTime;
 	private Timestamp updatedTime;
 	private int deletedFlag;
@@ -18,13 +18,13 @@ public class WordQuizApp {
 	}
 	
 	//parametor constructor
-	public WordQuizApp (int id, String japaneseWord, String englishWord, String hint, String comment,
+	public WordQuizApp (int id, String japaneseWord, String englishWord, String hint, String note,
 			Timestamp createdTime, Timestamp updatedTime, int deletedFlag, Timestamp deletedTime) {
 		this.id = id;
 		this.japaneseWord = japaneseWord;
 		this.englishWord = englishWord;
 		this.hint = hint;
-		this.comment = comment;
+		this.note = note;
 		this.createdTime = createdTime;
 		this.updatedTime = updatedTime;
 		this.deletedFlag = deletedFlag;
@@ -63,12 +63,12 @@ public class WordQuizApp {
 		this.hint = hint;
 	}
 	
-	public String getComment() {
-		return comment;
+	public String getNote() {
+		return note;
 	}
 	
-	public void setComment (String comment) {
-		this.comment = comment;
+	public void setNote (String note) {
+		this.note = note;
 	}	
 	
 	public Timestamp getcCeatedTime() {
@@ -110,7 +110,7 @@ public class WordQuizApp {
 				", japaneseWord='" + japaneseWord + '\'' +
 				", englishWord='" + englishWord + '\'' +
 				", hint = '" + hint + '\'' +
-				", comment = '" + comment + '\'' +
+				", note = '" + note + '\'' +
 				'}';
 	}
 }

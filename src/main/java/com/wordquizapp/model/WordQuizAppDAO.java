@@ -12,6 +12,7 @@ import com.wordquizapp.util.SqlLoader;
 
 public class WordQuizAppDAO {
 	private static final String AllWordsSql = SqlLoader.getSql("getAllWords.sql");
+	private static final String FirstRandomWordSql = SqlLoader.getSql("getFirstRandomWord.sql");	
 	private static final String RandomWordsSql = SqlLoader.getSql("getRandomWords.sql");
 	private static final String GetWordByIdSql = SqlLoader.getSql("getRWordById.sql");
     private static final String GetWordCountSql = SqlLoader.getSql("getWordCount.sql");
@@ -33,7 +34,7 @@ public class WordQuizAppDAO {
 						wordQuizApp.setJapaneseWord(rs.getString("japaneseWord"));
 						wordQuizApp.setEnglishWord(rs.getString("englishWord"));
 						wordQuizApp.setHint(rs.getString("hint"));
-						wordQuizApp.setComment(rs.getString("comment"));
+						wordQuizApp.setNote(rs.getString("note"));
 						words.add(wordQuizApp);
 					}
 		} catch (SQLException e) {
@@ -49,25 +50,29 @@ public class WordQuizAppDAO {
      */
 
 	public WordQuizApp getRandomWord (List<Integer> excludeIds) {
-		String sql = RandomWordsSql;
+		String sql;
 		if (excludeIds != null && !excludeIds.isEmpty()) {
-			
 			String placeholders = String.join((","), java.util.Collections.nCopies(excludeIds.size(), "?"));
-			sql = sql.replace("{ids}", placeholders);
+			sql = RandomWordsSql.replace("{ids}", placeholders);
 		}
 		else {
-			sql = sql.replace("WHERE id not in ({ids})", "");
+			sql = FirstRandomWordSql;
 		}
-		
+
+		// for debug
+		System.out.println("=== DEBUG: SQL Content ===");
+		System.out.println(sql);
+		System.out.println("==========================");
+
 		try (Connection conn = DatabaseConnection.getConnection();
 				PreparedStatement pstmt = conn.prepareStatement(sql)) {
-					
+
 					if (excludeIds != null && !excludeIds.isEmpty()) {
 						for (int i = 0; i < excludeIds.size(); i++) {
 							pstmt.setInt(i + 1, excludeIds.get(i));
 						}
 					}
-					
+
 					try (ResultSet rs = pstmt.executeQuery()){
 						if(rs.next()) {
 							WordQuizApp wordQuizApp = new WordQuizApp();
@@ -75,7 +80,7 @@ public class WordQuizAppDAO {
 							wordQuizApp.setJapaneseWord(rs.getString("japaneseWord"));
 							wordQuizApp.setEnglishWord(rs.getString("englishWord"));
 							wordQuizApp.setHint(rs.getString("hint"));
-							wordQuizApp.setComment(rs.getString("comment"));
+							wordQuizApp.setNote(rs.getString("note"));
 							return wordQuizApp;
 						}
 					}
