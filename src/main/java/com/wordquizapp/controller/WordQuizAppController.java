@@ -340,10 +340,11 @@ public class WordQuizAppController extends HttpServlet {
 				session.setAttribute("userAnswer", "");				
 			} else {
 				logger.severe("Could not retrieve a word from the database.");
-				throw new ServletException("Falied to retrive the next question.");
+				throw new ServletException("Falied to retrive the next question.", e);
 			}
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, "An error occurred while retrieving the word.", e);
+			throw new ServletException("Failed to load next question", e);
 		}
 
 		prepareQuiz(request, response);		
@@ -410,9 +411,9 @@ public class WordQuizAppController extends HttpServlet {
 	private String getEncouragement(double percentage) { 
 	String encouragement = "";
 		if (percentage < 70) {
-			return "a";
+			return "Don't give up!";
 		} else {
-			return "b";
+			return "You did a great";
 		}
 	}
 }
