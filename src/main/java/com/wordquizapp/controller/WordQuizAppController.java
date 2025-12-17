@@ -183,7 +183,7 @@ public class WordQuizAppController extends HttpServlet {
 		//retrive each from the session
 	Integer currentQuestion = getOrDefault(session, "currentQuestion", 1);
 		WordQuizApp currentWord = (WordQuizApp) session.getAttribute("currentWord");
-		Boolean showHint = getOrDefault(session, "currentquestion", false);
+		Boolean showHint = getOrDefault(session, "showHint", false);
 		Boolean answered = getOrDefault(session, "answered", false);
 		Boolean isCorrect = getOrDefault(session, "isCorrect", false);
 		String userAnswer = (String) session.getAttribute("userAnswer");	
@@ -255,7 +255,7 @@ public class WordQuizAppController extends HttpServlet {
 			
 			 // Record the result
 			@SuppressWarnings("unchecked")
-			List<String> results = (List<String>) session.getAttribute("questionResults");
+			List<String> results = (List<String>) session.getAttribute("quizResults");
 			if (results == null) {
   	  			results = new ArrayList<>();
     			session.setAttribute("quizResults", results);
@@ -291,10 +291,8 @@ public class WordQuizAppController extends HttpServlet {
 			logger.info("show hint: " + currentWord.getHint());
 		}
 
-		RequestDispatcher dispatcher = request.getRequestDispatcher("/quiz.jsp");
-		dispatcher.forward(request, response);
-		
 		logger.info("--- showhint Method Finished ---");
+		prepareQuiz(request, response);
 	}
 	
 	private void nextQuestion(HttpServletRequest request, HttpServletResponse response)
@@ -345,7 +343,7 @@ public class WordQuizAppController extends HttpServlet {
 				session.setAttribute("userAnswer", "");				
 			} else {
 				logger.severe("Could not retrieve a word from the database.");
-				throw new ServletException("Falied to retrive the next question.", e);
+				throw new ServletException("Falied to retrive the next question.");
 			}
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, "An error occurred while retrieving the word.", e);
@@ -370,7 +368,7 @@ public class WordQuizAppController extends HttpServlet {
 
 		Integer correctAnswers = (Integer) session.getAttribute("correctAnswers");
 		@SuppressWarnings("unchecked")
-		List<String> questionResults = (List<String>) session.getAttribute("questionResults");
+		List<String> questionResults = (List<String>) session.getAttribute("quizResults");
 
 		double percentage = (correctAnswers * 100.0) / 10.0;
 		
@@ -396,7 +394,6 @@ public class WordQuizAppController extends HttpServlet {
 
 	@SuppressWarnings("unchecked")	
 	private <T> T getOrDefault(HttpSession session, String key, T defaultValue) {
-		// TODO Auto-generated method stub
 			T value = (T) session.getAttribute(key);
 			return value != null ? value : defaultValue;
 	}
