@@ -131,7 +131,7 @@ public class WordQuizAppController extends HttpServlet {
 	private void setNewQuestion(HttpSession session, WordQuizApp wordQuizApp) {
 		session.setAttribute("currentWord", wordQuizApp);
 		session.setAttribute("showHint", false);
-		session.setAttribute("answerd", false);
+		session.setAttribute("answered", false);
 		session.setAttribute("isCorrect", false);
 		session.setAttribute("userAnswer", "");
 	}
@@ -256,6 +256,11 @@ public class WordQuizAppController extends HttpServlet {
 			 // Record the result
 			@SuppressWarnings("unchecked")
 			List<String> results = (List<String>) session.getAttribute("questionResults");
+			if (results == null) {
+  	  			results = new ArrayList<>();
+    			session.setAttribute("quizResults", results);
+			}
+
 			int currentQuestion = (Integer) session.getAttribute("currentQuestion");
 			
 			String result = String.format("question%d: %s → %s (%s)",
@@ -335,7 +340,7 @@ public class WordQuizAppController extends HttpServlet {
 				session.setAttribute("currentWord", nextWord);
 				session.setAttribute("currentQuestion", currentQuestion + 1);
 				session.setAttribute("showHint", false);
-				session.setAttribute("answerd", false);
+				session.setAttribute("answered", false);
 				session.setAttribute("isCorrect", false);
 				session.setAttribute("userAnswer", "");				
 			} else {
