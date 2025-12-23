@@ -257,8 +257,6 @@ public class WordQuizAppController extends HttpServlet {
 			@SuppressWarnings("unchecked")
 			List<String> results = (List<String>) session.getAttribute("quizResults");
 			if (results == null) {
-				results = new ArrayList<>();
-				session.setAttribute("quizResults", results);
   	  			results = new ArrayList<>();
     			session.setAttribute("quizResults", results);
 			}
@@ -292,8 +290,8 @@ public class WordQuizAppController extends HttpServlet {
 		if(currentWord != null) {
 			logger.info("show hint: " + currentWord.getHint());
 		}
+
 		logger.info("--- showhint Method Finished ---");
-			prepareQuiz(request, response);				
 		prepareQuiz(request, response);
 	}
 	
@@ -349,10 +347,11 @@ public class WordQuizAppController extends HttpServlet {
 			}
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, "An error occurred while retrieving the word.", e);
+			throw new ServletException("Failed to load next question", e);
 		}
 
 		prepareQuiz(request, response);		
-
+		
 		logger.info("--- nextQuiz Method Finished ---");
 	}
 	
